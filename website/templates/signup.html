@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>seedhunt.org</title>
+        <link rel="stylesheet" href="static/style.css">
+    </head>
+    <body>
+        <div class="bannerimage">
+            <div class="bg-text">
+                <h1>
+                    Welcome to seedhunt.org!
+                </h1>
+                <h2>
+                    The 1.21 seed finding project
+                </h2>
+                <a href="/">
+                    <button class="button-3" role="button">Home</button>
+                </a>
+                <a href="/leaderboard">
+                    <button class="button-3" role="button">Leaderboard</button>
+                </a>
+                <a href="/account">
+                    <button class="button-3" role="button">Account</button>
+                </a>
+            </div>
+        </div>
+        <div style="padding: 10px;"></div>
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+                {% for message in messages %}
+                    <div class="flashes">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% block body %}{% endblock %}
+
+        <div class="register" style="padding-top: 0; padding-bottom: 0;">
+            <h2>Register</h2>
+        </div>  
+
+        <div class="register">
+            <form action="/signup_account" method="POST"> 
+                <label for="fname">Username</label>
+                <input type="text" id="fname" name="display_name" required>
+
+                <label for="fname">Email</label>
+                <input type="email" id="fname" name="email" required>
+
+                <label for="fname">Password</label>
+                <input type="password" id="fname" name="password" required>
+
+                <label for="fname">Confirm Password</label>
+                <input type="password" id="fname" name="password_confirm" required>
+
+                <input type="submit" value="Submit">
+            </form>
+        </div>
+    </body>
+</html>

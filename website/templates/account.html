@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>seedhunt.org</title>
+        <link rel="stylesheet" href="static/style.css">
+    </head>
+    <body>
+        <div class="bannerimage">
+            <div class="bg-text">
+                <h1>
+                    Welcome to seedhunt.org!
+                </h1>
+                <h2>
+                    The 1.21 seed finding project
+                </h2>
+                <a href="/">
+                    <button class="button-3" role="button">Home</button>
+                </a>
+                <a href="/leaderboard">
+                    <button class="button-3" role="button">Leaderboard</button>
+                </a>
+                <a href="/account">
+                    <button class="button-3" role="button">Account</button>
+                </a>
+            </div>
+        </div>
+        <div style="padding: 4px;"></div>
+
+        <center>
+            {% if not user %} 
+                <p>
+                    You are not signed in!
+                </p>
+                <a href="/signup">
+                    <button class="button-3" role="button">Sign Up</button>
+                </a>
+                <a href="/signin">
+                    <button class="button-3" role="button">Sign In</button>
+                </a>
+            {% else %}
+                <h3>
+                    Wecome {{ user }}!
+                </h3>
+            {% endif %}
+        </center>
+    </body>
+</html>

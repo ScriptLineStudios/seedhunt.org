@@ -1,0 +1,15 @@
+[submodule "cubiomes"]
+	path = cubiomes
+	url = https://github.com/Cubitect/cubiomes
+[submodule "cJSON"]
+	path = cJSON
+	url = https://github.com/DaveGamble/cJSON
+[submodule "naett"]
+	path = naett
+	url = https://github.com/erkkah/naett
+[submodule "raylib"]
+	path = raylib
+	url = https://github.com/raysan5/raylib
+[submodule "raygui"]
+	path = raygui
+	url = https://github.com/raysan5/raygui
