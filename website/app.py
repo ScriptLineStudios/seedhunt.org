@@ -22,7 +22,7 @@ temp_database = {
     "users": {
         "scriptlinestudios@protonmail.com": {
             "username": "ScriptLine",
-            "password": "MissyMolly@2021",
+            "password": "",
             "active_devices": 0,
             "device_ids": [13829, 2198, 21, 123, 321],
         }
