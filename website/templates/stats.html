@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>seedhunt.org</title>
+        <link rel="stylesheet" href="static/style.css">
+        <link rel="icon" type="image/x-icon" href="/static/Seedhunt.png">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+    </head>
+    <body>
+        <div class="bannerimage">
+            <div class="bg-text">
+                <h1>
+                    Welcome to seedhunt.org!
+                </h1>
+                <h2>
+                    The 1.21 seed finding project
+                </h2>
+                <a href="/">
+                    <button class="button-3" role="button">Home</button>
+                </a>
+                <a href="/stats">
+                    <button class="button-3" role="button">Stats</button>
+                </a>
+                <a href="/leaderboard">
+                    <button class="button-3" role="button">Leaderboard</button>
+                </a>
+                <a href="/account">
+                    <button class="button-3" role="button">Account</button>
+                </a>
+            </div>
+        </div>
+        <div style="padding: 10px;"></div>
+
+        <div style="display: block; margin: 0 auto;">
+            <canvas id="myChart" style="width:100%;max-width:700px"></canvas>
+        </div>
+
+        <script>
+            const xValues = {{ x_values | safe }};
+            const yValues = {{ y_values | safe }};
+            console.log(xValues)
+            
+            console.log(yValues)
+
+            let chart_data = {
+                labels: xValues,
+                datasets: [
+                    {
+                        label: 'Seeds/Second',
+                        data: yValues,
+                        borderColor: "rgba(255, 0, 0)",
+                        backgroundColor: "rgba(255, 0, 0)",
+                        fill: false
+                    }
+                ]
+            };
+
+            var ctx = document.getElementById('myChart').getContext('2d');
+            var chart = new Chart(ctx, {
+                type: 'line',
+                data: chart_data,
+                options: {
+                    plugins: {
+                        legend: {
+                            labels: {
+                                font: {
+                                    family: 'Arial',
+                                    size: 12,      
+                                    style: 'normal',
+                                    weight: 'bold',  
+                                    lineHeight: 1.2, 
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+        </script>
+
+    </body>
+</html>

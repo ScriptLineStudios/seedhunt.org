@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/time.h>
+#include <omp.h>
 
 #include "cubiomes/finders.h"
 #include "cubiomes/generator.h"
@@ -14,6 +15,7 @@
 
 #include "cJSON/cJSON.h"
 #include "naett/naett.h"
+#include "CThreads/cthreads.h"
 
 /*
 Goal: Find seeds that match the following criteria within 1500 of (0, 0) in each direction
@@ -68,13 +70,16 @@ bool radius_has_structure(Generator *g, int structure, uint64_t seed) {
     int reg_min = -floor(RADIUS / 16.0 / sconf.regionSize);
 
     Pos p;
-    for (int rx = -reg_min; rx <= reg_max; rx++) {
-        for (int rz = -reg_min; rz <= reg_max; rz++) {
+    for (int rx = reg_min; rx <= reg_max; rx++) {
+        for (int rz = reg_min; rz <= reg_max; rz++) {
             if (!getStructurePos(structure, VERSION, seed, rx, rz, &p)) {
                 continue;
             }
 
             if (isViableStructurePos(structure, g, p.x, p.z, 0)) {
+                // if (structure == Desert_Pyramid) {
+                    // printf("\nDesert Pyramid: %d %d Seed: %" PRIu64 "\n", p.x, p.z, seed);
+                // }
                 return true;
             }
         }
@@ -93,35 +98,35 @@ int early_exits = 0;
 bool check_seed(Generator *g, uint64_t seed) {
     // this is where the magic happens...
 
-    // this is a nice quick invalidation we can do:
-    // StructureConfig sconf;
-    // getStructureConfig(Outpost, VERSION, &sconf);
-
-    // int outpost_region = floor(RADIUS / 16.0 / sconf.regionSize);
-
-    // for (int rx = -outpost_region; rx <= outpost_region; rx++) {
-    //     for (int rz = -outpost_region; rz <= outpost_region; rz++) {
-    //         uint64_t s = seed;
-    //         Pos p = getFeaturePos(sconf, seed, rx, rz);
-    //         _setAttemptSeed(&s, (p.x) >> 4, (p.z) >> 4);
-    //         // can_place[index] = nextInt(&seed, 5) == 0;
-    //         // index++;
-    //         bool possible_to_place = nextInt(&s, 5) == 0;
-    //         if (possible_to_place) {
-    //             goto complete;
-    //         }
-    //     }
-    // }
-    // early_exits++;
-    // return false;
-
-complete:
     StrongholdIter sh;
     Pos p = initFirstStronghold(&sh, VERSION, seed);
     if (p.x > RADIUS || p.x < -RADIUS || p.z > RADIUS || p.z < -RADIUS) {
         early_exits++;
         return false;
     }
+    // this is a nice quick invalidation we can do:
+    StructureConfig sconf;
+    getStructureConfig(Outpost, VERSION, &sconf);
+
+    int outpost_region = floor(RADIUS / 16.0 / sconf.regionSize);
+
+    for (int rx = -outpost_region; rx <= outpost_region; rx++) {
+        for (int rz = -outpost_region; rz <= outpost_region; rz++) {
+            uint64_t s = seed;
+            Pos p = getFeaturePos(sconf, seed, rx, rz);
+            _setAttemptSeed(&s, (p.x) >> 4, (p.z) >> 4);
+            // can_place[index] = nextInt(&seed, 5) == 0;
+            // index++;
+            bool possible_to_place = nextInt(&s, 5) == 0;
+            if (possible_to_place) {
+                goto complete;
+            }
+        }
+    }
+    early_exits++;
+    return false;
+
+complete:
 
     applySeed(g, DIM_OVERWORLD, seed);
     if (!radius_has_structure(g, Mansion, seed)) {
@@ -136,23 +141,60 @@ complete:
     if (!radius_has_structure(g, Outpost, seed)) {
         return false;
     }
-    // if (!radius_has_structure(g, Igloo, seed)) {
-    //     return false;
-    // }
-    // if (!radius_has_structure(g, Swamp_Hut, seed)) {
-    //     return false;
-    // }
-    // if (!radius_has_structure(g, Desert_Pyramid, seed)) {
-    //     return false;
-    // }
-    // if (!radius_has_structure(g, Jungle_Pyramid, seed)) {
-    //     return false;
-    // }
-    // if (!radius_has_structure(g, Ancient_City, seed)) {
-    //     return false;
-    // }
+    if (!radius_has_structure(g, Ancient_City, seed)) {
+        return false;
+    }
+    if (!radius_has_structure(g, Igloo, seed)) {
+        return false;
+    }
+    if (!radius_has_structure(g, Swamp_Hut, seed)) {
+        return false;
+    }
+    if (!radius_has_structure(g, Desert_Pyramid, seed)) {
+        return false;
+    }
+    if (!radius_has_structure(g, Jungle_Pyramid, seed)) {
+        return false;
+    }
+
+    int mask = 0b0000000;
+    for (int cx = -64; cx < 64; cx+=8) {
+        for (int cz= -64; cz < 64; cz+=8) {
+            int biomeID = getBiomeAt(g, 16, cx, 256, cz);
+            switch (biomeID) {
+                case forest:
+                    mask |= 0b1000000;
+                    break;
+                case cherry_grove:
+                    mask |= 0b0100000;
+                    break;
+                case savanna:
+                    mask |= 0b0010000;
+                    break;
+                case mangrove_swamp:
+                    mask |= 0b0001000;
+                    break;
+                case jungle:
+                    mask |= 0b0000100;
+                    break;
+                case taiga:
+                    mask |= 0b0000010;
+                    break;
+                case pale_garden:
+                    mask |= 0b0000001;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    if (mask != 0b1111111) {
+        return false;
+    }
 
     return true;
+    // return count >= 4;
 }
 
 typedef struct {
@@ -204,7 +246,7 @@ const char *make_request(const char *url, const char *data, Response *r) {
     naettFree(req);
 }
 
-int sign_in(const char *email, const char *password) {
+int sign_in(const char *email, const char *password, int client_device_id) {
     printf("[INFO]: Signing in\n");    
     
     cJSON *signin_info = cJSON_CreateObject();
@@ -212,9 +254,12 @@ int sign_in(const char *email, const char *password) {
     cJSON_AddItemToObject(signin_info, "email", j_email);
     cJSON *j_password = cJSON_CreateString(password);
     cJSON_AddItemToObject(signin_info, "password", j_password);
-    
+    cJSON *j_client_device_id = cJSON_CreateNumber(client_device_id);
+    cJSON_AddItemToObject(signin_info, "client_device_id", j_client_device_id);
+
     Response r;
     make_request("http://127.0.0.1:5000/device_signin", cJSON_Print(signin_info), &r);    
+    printf("%s\n", r.buffer);
     cJSON *json = cJSON_Parse(r.buffer);
     cJSON *json_message = cJSON_GetObjectItemCaseSensitive(json, "message");
     cJSON *json_device_id = cJSON_GetObjectItemCaseSensitive(json, "device_id");
@@ -224,6 +269,7 @@ int sign_in(const char *email, const char *password) {
 
     if (device_id < 0) {
         printf("[INFO]: Signin failed!\n");
+        printf("%s\n", message);
         exit(1);
     }
 
@@ -244,6 +290,17 @@ int sign_out(int device_id) {
     exit(0);
 }
 
+int report_sps(int device_id, int sps) {
+    cJSON *data = cJSON_CreateObject();
+    cJSON *j_sps = cJSON_CreateNumber(sps);
+    cJSON_AddItemToObject(data, "sps", j_sps);
+    cJSON *j_device_id = cJSON_CreateNumber(device_id);
+    cJSON_AddItemToObject(data, "device_id", j_device_id);
+
+    Response r;
+    make_request("http://127.0.0.1:5000/device_report_sps", cJSON_Print(data), &r); 
+}
+
 typedef struct {
     uint64_t start_seed;
     uint64_t end_seed;
@@ -258,6 +315,11 @@ Work get_work(int device_id) {
     
     Response r;
     make_request("http://127.0.0.1:5000/device_get_work", cJSON_Print(data), &r);    
+
+    if (r.code == 401) {
+        printf("[INFO]: Client already has work!\n");  
+        exit(1);
+    }
 
     cJSON *json = cJSON_Parse(r.buffer);
     cJSON *json_end_seed = cJSON_GetObjectItemCaseSensitive(json, "end_seed");
@@ -277,7 +339,7 @@ typedef struct {
     uint64_t seeds[64];
 } WorkResults;
 
-WorkResults do_work(Work *work) {
+WorkResults do_work(Work *work, int device_id) {
     getStructureConfig(Ruined_Portal, VERSION, &rp_sconf);
 
     WorkResults results;
@@ -306,8 +368,14 @@ WorkResults do_work(Work *work) {
         if (total_seeds % 10000000 == 0) {
             gettimeofday(&current_time, 0);
             double time_taken = current_time.tv_sec + current_time.tv_usec / 1e6 - start_time.tv_sec - start_time.tv_usec / 1e6; // in seconds
-            printf("\r[INFO]: Currently searching %f seeds/second", total_seeds / time_taken);
-            fflush(stdout);
+            // printf("\r[INFO]: Currently searching %f seeds/second", total_seeds / time_taken);
+            // fflush(stdout);
+        }
+        if ((total_seeds + 1) % 100000000 == 0) {
+            gettimeofday(&current_time, 0);
+            double time_taken = current_time.tv_sec + current_time.tv_usec / 1e6 - start_time.tv_sec - start_time.tv_usec / 1e6; // in seconds
+            double sps = total_seeds / time_taken;
+            // report_sps(device_id, (int)sps);
         }
         total_seeds++;
     }
@@ -339,16 +407,65 @@ void submit_work(WorkResults *results, int device_id) {
     make_request("http://127.0.0.1:5000/device_submit_work", cJSON_Print(data), &r);    
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    if (argc <= 1) {
+        printf("USAGE: seedfinder <device num> <email> <password> <num threads>\n");
+        exit(1);
+    }
+
     naettInit(NULL);
 
-    int device_id = sign_in("scriptlinestudios@protonmail.com", "MissyMolly@2021");
+    const char *email = argv[2];
+    const char *password = argv[3];
+
+    int device_id = sign_in(email, password, atoi(argv[1]));
+    // printf("%d\n", device_id);
+    // Work work = get_work(device_id);
+    // printf("%" PRIu64 " %" PRIu64 "\n", work.start_seed, work.end_seed);
+    // printf("%d\n", device_id);
+    // sign_out(device_id);
     // exit(0);
 
-    for (int i = 0; i < 20; i++) {
+    int num_threads = atoi(argv[4]);
+
+    omp_set_num_threads(num_threads);
+    for (int i = 0; ; i++) {
         Work work = get_work(device_id);
-        WorkResults results = do_work(&work);
-        submit_work(&results, device_id);
+        printf("GOT WORK: %" PRIu64 " %" PRIu64 "\n", work.start_seed, work.end_seed);
+        WorkResults thread_results[64];
+
+        uint64_t seeds_per_thread = (work.end_seed - work.start_seed) / num_threads;
+
+        clock_t start_time = clock();
+        #pragma omp parallel 
+        {
+            uint64_t thread_start_seed = work.start_seed + (seeds_per_thread * omp_get_thread_num());
+            uint64_t thread_end_seed = work.start_seed + (seeds_per_thread * omp_get_thread_num()) + seeds_per_thread;
+            printf("%d %" PRIu64 " %" PRIu64 "\n", omp_get_thread_num(), thread_start_seed, thread_end_seed);
+            Work thread_work = (Work){.start_seed=thread_start_seed, .end_seed=thread_end_seed};
+            WorkResults thread_result = do_work(&thread_work, device_id);
+            int id = omp_get_thread_num();
+            thread_results[id] = thread_result;
+        }
+        clock_t end_time = clock();
+        double seconds = ((double)(end_time - start_time) / CLOCKS_PER_SEC) / num_threads;
+        printf("Time Taken: %f\n", seconds); 
+        double sps = (work.end_seed - work.start_seed) / seconds;
+        printf("SPS: %f\n", sps);
+        // exit(1);
+        report_sps(device_id, (int)sps);
+
+        WorkResults final_results;
+        final_results.size = 0;
+        for (int i = 0; i < num_threads; i++) {
+            WorkResults tr = thread_results[i];
+            for (int j = 0; j < tr.size; j++) {
+                final_results.seeds[final_results.size] = tr.seeds[j];
+                final_results.size++;
+            }
+        }
+
+        submit_work(&final_results, device_id);
     }
 
     sign_out(device_id);

@@ -26,27 +26,26 @@
                 <a href="/account">
                     <button class="button-3" role="button">Account</button>
                 </a>
-                <div style="padding: 4px;"></div>
-                <a href="/search">
-                    <button class="button-3" role="button">Search</button>
-                </a>
             </div>
         </div>
         <div style="padding: 4px;"></div>
 
-        <div class="seed_holder">
-            {% for seed in seeds|reverse %}
-            <div style="padding: 1%;">
-                <div class="seed">
-                    <a href="/seeds/{{ seed['_id'] }}">
-                        <img style="border-radius: 20px; object-fit: contain;" src="{{ seed['image'] }}" height="300" width="300"></img>
-                    </a>
-                    <h2 style="color: #ffffff;">{{ seed["_id"] }}</h2>
-                    <!-- <h2>By: <a href="/account_view/{{ seed['finder'] }}">{{ seed["finder"] }}</a></h2> -->
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-
+        <center>
+            {% if not user %} 
+                <p>
+                    You are not signed in!
+                </p>
+                <a href="/signup">
+                    <button class="button-3" role="button">Sign Up</button>
+                </a>
+                <a href="/signin">
+                    <button class="button-3" role="button">Sign In</button>
+                </a>
+            {% else %}
+                <h3>
+                    Wecome {{ user }}!
+                </h3>
+            {% endif %}
+        </center>
     </body>
 </html>

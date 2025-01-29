@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>seedhunt.org</title>
+        <link rel="stylesheet" href="static/style.css">
+        <link rel="icon" type="image/x-icon" href="/static/Seedhunt.png">
+    </head>
+    <body>
+        <div class="bannerimage">
+            <div class="bg-text">
+                <h1>
+                    Welcome to seedhunt.org!
+                </h1>
+                <h2>
+                    The 1.21 seed finding project
+                </h2>
+                <a href="/">
+                    <button class="button-3" role="button">Home</button>
+                </a>
+                <a href="/stats">
+                    <button class="button-3" role="button">Stats</button>
+                </a>
+                <a href="/leaderboard">
+                    <button class="button-3" role="button">Leaderboard</button>
+                </a>
+                <a href="/account">
+                    <button class="button-3" role="button">Account</button>
+                </a>
+                <div style="padding: 4px;"></div>
+                <a href="/search">
+                    <button class="button-3" role="button">Search</button>
+                </a>
+            </div>
+        </div>
+        <div style="padding: 4px;"></div>
+        <center>
+            <h3>
+                Search for seeds that meet a certain criteria
+            </h3>
+            <div id="container">
+                <button class="button-3" id="duplicateButton">Add Criteria</button>
+                <br><br>
+                <form action="/lookup" id="innerContainer">
+                    <div id="criteria">
+                        <div class="register" id="structure_query">
+                            <select name="type" id="structure">
+                                <option value="structure">Structure</option>
+                                <option value="biome">Biome</option>
+                            </select>
+                            <select name="structure" id="structure">
+                                <option value="village">village</option>
+                                <option value="mansion">mansion</option>
+                            </select>
+                            <div style="padding: 5px;"></div>
+                            <label for="within">Within</label>
+                            <input type="within" id="within" name="within" required>
+                            <br>
+                        </div>
+                    </div>
+                    <input type="submit" value="Submit">
+                </form>
+            </div>
+        </center>
+    </body>
+    <script>
+        document.getElementById('duplicateButton').addEventListener('click', function() {
+            const originalDiv = document.getElementById('structure_query');
+            const clonedDiv = originalDiv.cloneNode(true);
+            document.getElementById('criteria').appendChild(clonedDiv);
+            let elements = document.getElementsByClassName("0")
+            elements[elements.length - 1].className = elements.length;
+        });
+    </script>
+</html>

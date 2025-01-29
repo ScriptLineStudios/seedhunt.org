@@ -2,7 +2,7 @@
 <html>
     <head>
         <title>seedhunt.org</title>
-        <link rel="stylesheet" href="static/style.css">
+        <link rel="stylesheet" href="../static/style.css">
         <link rel="icon" type="image/x-icon" href="/static/Seedhunt.png">
     </head>
     <body>
@@ -26,27 +26,40 @@
                 <a href="/account">
                     <button class="button-3" role="button">Account</button>
                 </a>
-                <div style="padding: 4px;"></div>
-                <a href="/search">
-                    <button class="button-3" role="button">Search</button>
-                </a>
             </div>
         </div>
         <div style="padding: 4px;"></div>
-
-        <div class="seed_holder">
-            {% for seed in seeds|reverse %}
-            <div style="padding: 1%;">
-                <div class="seed">
-                    <a href="/seeds/{{ seed['_id'] }}">
-                        <img style="border-radius: 20px; object-fit: contain;" src="{{ seed['image'] }}" height="300" width="300"></img>
-                    </a>
-                    <h2 style="color: #ffffff;">{{ seed["_id"] }}</h2>
-                    <!-- <h2>By: <a href="/account_view/{{ seed['finder'] }}">{{ seed["finder"] }}</a></h2> -->
-                </div>
-            </div>
+        <center>
+            <h1>
+                {{ seed["_id"] }}
+            </h1>
+            <img style="border-radius: 5px; object-fit: contain;" src="{{ seed['image'] }}" height="600" width="600"></img>
+            <h3>
+                Found By: {{ seed["finder_username"] }}
+            </h3>
+        </center>
+        <div style="padding: 8px;"></div>
+        
+        <table>
+            <th>Structure</th>
+            <th>Quantity</th>
+            {% for structure in seed["structure_counts"] %}
+            <tr>
+                <td>{{ structure[0] }}</td>
+                <td>{{ structure[1] }}</td>
+            </tr>
             {% endfor %}
-        </div>
-
+        </table>
+        <div style="padding: 8px;"></div>
+        
+        <table>
+            <th>Biome</th>
+            {% for biome in seed["biomes"] %}
+            <tr>
+                <td>{{ biome }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <div style="padding: 8px;"></div>
     </body>
 </html>

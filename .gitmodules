@@ -13,3 +13,9 @@
 [submodule "raygui"]
 	path = raygui
 	url = https://github.com/raysan5/raygui
+[submodule "glfw"]
+	path = glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "CThreads"]
+	path = CThreads
+	url = https://github.com/PerformanC/CThreads
