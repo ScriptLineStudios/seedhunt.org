@@ -12,6 +12,8 @@ import datetime
 import math
 import hashlib
 
+import os
+
 from seed_to_image import get_seed_data
 
 WORK_SIZE = 1_000_000_000
@@ -20,7 +22,7 @@ seed_queue = queue.Queue()
 
 class Database:
     def __init__(self):
-        self.client = MongoClient("mongodb+srv://scriptlinestudios:T7U8tadqrsbhGSOf@seedhuntorg.sl2kn.mongodb.net/?retryWrites=true&w=majority&appName=seedhuntorg")
+        self.client = MongoClient(os.environ["MONGO_URL"])
 
         self.user_db = self.client["Users"]
         self.work_db = self.client["Work"]
@@ -33,9 +35,6 @@ class Database:
         self.work_state_col = self.work_db["WorkState"] 
         self.valid_seeds_col = self.work_db["Seeds"] 
         self.seeds_per_second_buckets_col = self.work_db["SeedsPerSecond"] 
-        # #print(list(self.seeds_per_second_buckets_col.find())[-1])
-        # exit()
-        #create a start bucket
 
     def add_seed(self, seed, finder):
         # image = get_image_for_seed(seed)
@@ -58,11 +57,9 @@ class Database:
         
         valid_seeds = []
 
-        print(criteria)
         for seed in seeds:
             is_valid_seed = True
             for structure in criteria.keys():
-                print(f"lookup: {structure.replace('+', ' ')}")
                 seed_structure_positions = seed.get("structure_positions").get(structure.replace("+", " "))
                 if len(seed_structure_positions) < len(criteria[structure]): # if one of the criteria fails, goto next seed
                     is_valid_seed = False
@@ -91,11 +88,7 @@ class Database:
         bucket = list(self.seeds_per_second_buckets_col.find())[-1]
         bucket_creation_time = bucket["_id"]
         now = datetime.datetime.utcnow()
-        #print(now)
-        #print(bucket_creation_time)
-        if (now - bucket_creation_time).seconds > 60: # more than a minute has passed
-            #print("CREATING A NEW BUCKET!")
-            # create a new bucket
+        if (now - bucket_creation_time).seconds > 60 * 15: # more than 15 minutes have passed
             self.seeds_per_second_buckets_col.insert_one({
                 "_id": now,
                 "sps": [] 
@@ -104,7 +97,7 @@ class Database:
                 "_id": now,
                 "sps": [] 
             }
-            # #print(bucket, bucket_creation_time)
+
             bucket_creation_time = now
             assert(bucket["_id"] == bucket_creation_time)
             self.device_col.update_many( # allow contributions from all devices 
@@ -219,7 +212,7 @@ if not db.work_state_col.find_one({"_id": "state"}):
         "complete_work": [],
     })
 
-db.create_new_user("scriptlinestudios@protonmail.com", "ScriptLine", "k>^,WHR2N9*H6")
+# db.create_new_user("scriptlinestudios@protonmail.com", "ScriptLine", "k>^,WHR2N9*H6")
 db.generate_new_work()
 
 db.seeds_per_second_buckets_col.insert_one({
@@ -348,7 +341,7 @@ def signup_account():
         return redirect(url_for("signup"))
 
     db.create_new_user(email, username, password)
-    session["email"] = email # this will soon change :)
+    session["email"] = email # this will soon change :) or not... :kek:
 
     return redirect(url_for("home"))
 
@@ -356,9 +349,6 @@ def signup_account():
 def device_signout():  
     content = json.loads(str(request.stream.read().decode()))
     device_id = int(content.get("device_id"))
-
-    # email = temp_database["devices"][device_id]["owner"]
-    # temp_database["users"].get(email)["active_devices"] -= 1
 
     device = db.get_device(device_id)
     user = db.get_user(device.get("owner"))
@@ -376,16 +366,6 @@ def device_signout():
         db.update_device(device)
 
     db.remove_device(device_id)
-
-    # # if a device that signs out has work, move it back into incomplete
-    # if temp_database["devices"][device_id]["has_work"]:
-    #     wid = temp_database["devices"][device_id]["work_id"]
-    #     for work_block in temp_database["work"]["active_pool"]:
-    #         if work_block["id"] == wid:
-    #             temp_database["work"]["active_pool"].remove(work_block)
-    #             temp_database["work"]["incomplete_blocks"].append(work_block)
-
-    # del temp_database["devices"][device_id]
 
     return {}, 200
 
@@ -468,7 +448,6 @@ def device_signin():
     seed = user["hash"] + client_device_id
     random.seed(seed)
     device_id = random.randrange(0, 1<<16)
-    #print(f"DEVICE ID = {device_id}")
 
     # if the device we are trying to create already exists, it means the user didn't sign out correctly and they can have this device reassigned to them
     if db.create_new_device(device_id, email):
