@@ -258,7 +258,7 @@ int sign_in(const char *email, const char *password, int client_device_id) {
     cJSON_AddItemToObject(signin_info, "client_device_id", j_client_device_id);
 
     Response r;
-    make_request("http://127.0.0.1:5000/device_signin", cJSON_Print(signin_info), &r);    
+    make_request("http://192.168.68.120:5000/device_signin", cJSON_Print(signin_info), &r);    
     printf("%s\n", r.buffer);
     cJSON *json = cJSON_Parse(r.buffer);
     cJSON *json_message = cJSON_GetObjectItemCaseSensitive(json, "message");
@@ -285,7 +285,7 @@ int sign_out(int device_id) {
     cJSON_AddItemToObject(data, "device_id", j_device_id);
 
     Response r;
-    make_request("http://127.0.0.1:5000/device_sign_out", cJSON_Print(data), &r);    
+    make_request("http://192.168.68.120:5000/device_sign_out", cJSON_Print(data), &r);    
     
     exit(0);
 }
@@ -298,7 +298,7 @@ int report_sps(int device_id, int sps) {
     cJSON_AddItemToObject(data, "device_id", j_device_id);
 
     Response r;
-    make_request("http://127.0.0.1:5000/device_report_sps", cJSON_Print(data), &r); 
+    make_request("http://192.168.68.120:5000/device_report_sps", cJSON_Print(data), &r); 
 }
 
 typedef struct {
@@ -314,7 +314,7 @@ Work get_work(int device_id) {
     cJSON_AddItemToObject(data, "device_id", j_device_id);
     
     Response r;
-    make_request("http://127.0.0.1:5000/device_get_work", cJSON_Print(data), &r);    
+    make_request("http://192.168.68.120:5000/device_get_work", cJSON_Print(data), &r);    
 
     if (r.code == 401) {
         printf("[INFO]: Client already has work!\n");  
@@ -404,7 +404,7 @@ void submit_work(WorkResults *results, int device_id) {
     cJSON_AddItemToObject(data, "device_id", j_device_id);
 
     Response r;
-    make_request("http://127.0.0.1:5000/device_submit_work", cJSON_Print(data), &r);    
+    make_request("http://192.168.68.120:5000/device_submit_work", cJSON_Print(data), &r);    
 }
 
 int main(int argc, char **argv) {

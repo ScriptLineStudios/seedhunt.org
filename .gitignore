@@ -50,3 +50,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+
+# our shit
+seed_finder_linux
+seed_finder_windows.exe
+website/static/seeds/*

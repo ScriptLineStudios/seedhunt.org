@@ -9,6 +9,8 @@ from pymongo import MongoClient
 import queue
 import threading
 import datetime
+import math
+import hashlib
 
 from seed_to_image import get_seed_data
 
@@ -31,7 +33,7 @@ class Database:
         self.work_state_col = self.work_db["WorkState"] 
         self.valid_seeds_col = self.work_db["Seeds"] 
         self.seeds_per_second_buckets_col = self.work_db["SeedsPerSecond"] 
-        # print(list(self.seeds_per_second_buckets_col.find())[-1])
+        # #print(list(self.seeds_per_second_buckets_col.find())[-1])
         # exit()
         #create a start bucket
 
@@ -52,25 +54,47 @@ class Database:
         })
 
     def find_seeds_that_match_criteria(self, criteria):
-        # {'village': ['100', '400', '100']}
-        seeds = list(self.valid_seeds_col.find_one({}))
+        seeds = list(self.valid_seeds_col.find({}))
+        
+        valid_seeds = []
 
-        # for seed in seeds:
-            # for structure in criteria.keys():
-                # if len(seed.get("structure_positions").get(structure)) < 
+        print(criteria)
+        for seed in seeds:
+            is_valid_seed = True
+            for structure in criteria.keys():
+                print(f"lookup: {structure.replace('+', ' ')}")
+                seed_structure_positions = seed.get("structure_positions").get(structure.replace("+", " "))
+                if len(seed_structure_positions) < len(criteria[structure]): # if one of the criteria fails, goto next seed
+                    is_valid_seed = False
+                    break
                 
+                f = []
+                used_positions = []
+                fail = False
+                for within in criteria[structure]: 
+                    f = [math.dist((0, 0), position) < float(within) for position in seed_structure_positions]
+                    if not any(f):
+                        fail = True
+                        break 
 
+                if fail:
+                    is_valid_seed = False
+                    break
 
+            if is_valid_seed:
+                valid_seeds.append(seed)
+        
+        return valid_seeds
 
     def add_sps_to_latest_bucket(self, sps, device_id):
         # grab the latest bucket
         bucket = list(self.seeds_per_second_buckets_col.find())[-1]
         bucket_creation_time = bucket["_id"]
         now = datetime.datetime.utcnow()
-        print(now)
-        print(bucket_creation_time)
+        #print(now)
+        #print(bucket_creation_time)
         if (now - bucket_creation_time).seconds > 60: # more than a minute has passed
-            print("CREATING A NEW BUCKET!")
+            #print("CREATING A NEW BUCKET!")
             # create a new bucket
             self.seeds_per_second_buckets_col.insert_one({
                 "_id": now,
@@ -80,7 +104,7 @@ class Database:
                 "_id": now,
                 "sps": [] 
             }
-            # print(bucket, bucket_creation_time)
+            # #print(bucket, bucket_creation_time)
             bucket_creation_time = now
             assert(bucket["_id"] == bucket_creation_time)
             self.device_col.update_many( # allow contributions from all devices 
@@ -106,7 +130,7 @@ class Database:
             self.account_col.insert_one({
                 "_id": email,
                 "username": username,
-                "password": password,
+                "password": hashlib.sha256(password.encode()).hexdigest(),
                 "active_devices": 0,
                 "devices": [],
                 "hash": hash(email + username + password) # used for generating device ids
@@ -116,14 +140,13 @@ class Database:
         user = self.account_col.find_one({"_id": email})
         if user:
             user_password = user.get("password")
-            if password == user_password:
+            if user_password == hashlib.sha256(password.encode()).hexdigest():
                 return user
 
     def update_user(self, user):
         self.account_col.update_one({"_id": user["_id"]}, {"$set": user})
 
     def create_new_device(self, device_id, email): 
-        print(f"EMAIL = {email}")
         device = self.device_col.find_one({"_id": device_id})
         
         if device:
@@ -239,20 +262,20 @@ def stats():
     for bucket in buckets:
         sps.append(sum(bucket["sps"]))
         x_values.append(str(bucket["_id"].ctime()))
-    print(x_values)
+    #print(x_values)
     # x_values = [i for i in range(len(sps))]
     y_values = sps
     return render_template("stats.html", x_values=x_values, y_values=y_values)
 
 @app.route("/account")
 def account():
-    print(session)
+    #print(session)
     if session.get("email"):
         account_devices = db.device_col.find({ "owner": session["email"]})
         devices = []
         for device in list(account_devices):
             devices.append(device)
-        print(devices)
+        #print(devices)
         return render_template("account_signed_in.html", user=session.get("email"), devices=devices)
 
     return render_template("account_signed_out.html", user=session.get("email"))
@@ -267,7 +290,7 @@ def signin():
 
 @app.route("/search")
 def search():
-    return render_template("search.html")
+    return render_template("search.html", seeds=[])
 
 @app.route("/lookup")
 def lookup():
@@ -286,8 +309,8 @@ def lookup():
 
         criteria_dict[structure].append(distance)
 
-    print(db.find_seeds_that_match_criteria(criteria_dict))
-    return ""
+    valid_seeds = db.find_seeds_that_match_criteria(criteria_dict)
+    return render_template("search.html", seeds=valid_seeds)
 
 @app.route("/seeds/<seed>")
 def seeds(seed):
@@ -306,6 +329,11 @@ def signin_account():
 
     session["email"] = email
 
+    return redirect(url_for("home"))
+
+@app.route("/signout_account", methods=["GET"])
+def signout_account():
+    session["email"] = None
     return redirect(url_for("home"))
 
 @app.route("/signup_account", methods=["POST"])
@@ -386,7 +414,7 @@ def device_submit_work():
 def device_get_work():
     content = json.loads(str(request.stream.read().decode()))
     device_id = int(content.get("device_id"))
-    print(device_id)
+    #print(device_id)
 
     if db.get_device(device_id).get("currently_working"):
         return db.active_pool_col.find_one({ "_id": db.get_device(device_id).get("work_id") }), 200
@@ -412,7 +440,7 @@ def device_report_sps():
     device_id = content.get("device_id")
     sps = content.get("sps")
 
-    print(f"sps for {device_id} = {sps}")
+    #print(f"sps for {device_id} = {sps}")
 
     device = db.get_device(device_id)
     device["seeds_per_second"] = sps
@@ -440,7 +468,7 @@ def device_signin():
     seed = user["hash"] + client_device_id
     random.seed(seed)
     device_id = random.randrange(0, 1<<16)
-    print(f"DEVICE ID = {device_id}")
+    #print(f"DEVICE ID = {device_id}")
 
     # if the device we are trying to create already exists, it means the user didn't sign out correctly and they can have this device reassigned to them
     if db.create_new_device(device_id, email):
@@ -454,5 +482,5 @@ def device_signin():
     }
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", debug=True)
 
